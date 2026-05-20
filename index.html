@@ -417,7 +417,7 @@
 
   <script>
     // 【重要】GASウェブアプリURLは既存設定をそのまま使用してください。
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw8kvEnVYxDEzJhUK4nQY4ruOILNqn2aqkfSGua_gsWJ4iPtLSvIh7De5xtxALOj6N9gg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyqP97MwDVl8FA7aYvctBaLl1NqyR-cxeBBR22PN-rICwbaDKsaow9a9QU13nhamKNARA/exec";
 
     let currentImageSrc = null;
     let currentImageName = "";
@@ -486,46 +486,87 @@
 
     async function processAndSubmit() {
       const btn = document.getElementById("submit-btn");
-      const element = document.getElementById("pdf-print-area");
+      const sourceElement = document.getElementById("pdf-print-area");
 
       const propertyName = document.getElementById("ui-propertyName").value.trim() || "未入力";
       const responsibleName = document.getElementById("ui-responsibleName").value.trim() || "";
       const personName = document.getElementById("ui-personName").value.trim() || "";
       const remarks = document.getElementById("ui-remarks").value.trim() || "";
 
+      let captureElement = null;
+
       try {
-        btn.textContent = "PDF作成・送信処理中...";
+        btn.textContent = "PDF作成中...";
         btn.disabled = true;
         btn.classList.add("opacity-50");
 
         preparePdfLayout({ propertyName, responsibleName, personName, remarks });
 
-        // html2pdfがPDF専用エリアを確実に読み込めるように一時的に画面上へ表示
-        showPdfArea(element);
+        /*
+          v3修正ポイント：
+          html2pdf().from(非表示エリア) だと、Chrome拡張やDriveプレビュー環境で
+          白紙PDFになることがあるため、PDF帳票を一時的に「見えるクローン」として
+          body直下に作り、html2canvasで画像化してからjsPDFへ貼り込みます。
+          GASへ送る propertyName / pdfBase64 は従来どおりです。
+        */
+        captureElement = sourceElement.cloneNode(true);
+        captureElement.id = "pdf-capture-area";
+        captureElement.setAttribute("aria-hidden", "true");
+        captureElement.style.position = "absolute";
+        captureElement.style.left = "0";
+        captureElement.style.top = "0";
+        captureElement.style.width = "190mm";
+        captureElement.style.minHeight = "277mm";
+        captureElement.style.background = "#ffffff";
+        captureElement.style.visibility = "visible";
+        captureElement.style.opacity = "1";
+        captureElement.style.zIndex = "99999";
+        captureElement.style.pointerEvents = "none";
+        captureElement.style.color = "#000000";
+        document.body.appendChild(captureElement);
+
         window.scrollTo(0, 0);
-        await wait(350);
+        await wait(500);
 
-        const safeFileName = normalizeFileName(propertyName);
-        const opt = {
-          margin: [8, 8, 8, 8],
-          filename: `${safeFileName}_形鋼受け入れ検査.pdf`,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-        };
+        const canvas = await html2canvas(captureElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: captureElement.scrollWidth,
+          windowHeight: captureElement.scrollHeight
+        });
 
-        const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf("datauristring");
-        hidePdfArea(element);
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 8;
+        const usableWidth = pageWidth - margin * 2;
+        const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = margin;
+        pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
+        heightLeft -= (pageHeight - margin * 2);
+
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = margin - (imgHeight - heightLeft);
+          pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
+          heightLeft -= (pageHeight - margin * 2);
+        }
+
+        const pdfBase64 = pdf.output("datauristring");
+
+        if (captureElement && captureElement.parentNode) {
+          captureElement.parentNode.removeChild(captureElement);
+          captureElement = null;
+        }
 
         btn.textContent = "GASへ送信中...";
 
@@ -543,8 +584,10 @@
         }
       } catch (error) {
         console.error(error);
-        hidePdfArea(element);
-        alert("エラーが発生しました。通信状況、GASのURL、写真サイズを確認してください。");
+        if (captureElement && captureElement.parentNode) {
+          captureElement.parentNode.removeChild(captureElement);
+        }
+        alert("エラーが発生しました。通信状況、GASのURL、写真サイズを確認してください。詳しくはブラウザの開発者ツールConsoleを確認してください。");
       } finally {
         resetBtn(btn);
       }
