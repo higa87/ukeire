@@ -6,14 +6,10 @@
   <title>形鋼受け入れ検査シート</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- v4：白紙PDF・通信エラー対策のため、使用するライブラリを明示して読み込み -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* =====================================================
-       入力画面用
-    ===================================================== */
     body {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -54,10 +50,23 @@
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
 
-    .check-card input {
+    .check-card input[type="checkbox"] {
       width: 28px;
       height: 28px;
       margin-top: 2px;
+    }
+
+    .remark-input {
+      margin-top: 0.6rem;
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.65rem;
+      font-size: 0.9rem;
+      line-height: 1.35;
+      background: #fff;
+      min-height: 44px;
+      resize: vertical;
     }
 
     .photo-button input[type="file"] {
@@ -80,15 +89,13 @@
     }
 
     /* =====================================================
-       PDF出力専用：Excel風フォーマット
-       入力画面とは別管理。GAS設定には影響しません。
+       PDF出力専用：A4 1ページ固定・Excel風フォーマット
     ===================================================== */
     #pdf-print-area {
       position: fixed;
       left: -120vw;
       top: 0;
       width: 190mm;
-      min-height: 277mm;
       background: #ffffff;
       color: #000000;
       box-sizing: border-box;
@@ -102,22 +109,20 @@
 
     .pdf-sheet {
       width: 190mm;
-      min-height: 277mm;
-      padding: 5mm;
+      padding: 4mm;
       box-sizing: border-box;
       background: #fff;
     }
 
     .pdf-title {
-      border: 1.5px solid #000;
-      border-bottom: 1.5px solid #000;
-      height: 14mm;
+      border: 0.8px solid #111;
+      height: 12mm;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       white-space: nowrap;
     }
 
@@ -125,54 +130,55 @@
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      border-left: 1.2px solid #000;
-      border-right: 1.2px solid #000;
-      border-bottom: 1.2px solid #000;
+      border-left: 0.8px solid #111;
+      border-right: 0.8px solid #111;
+      border-bottom: 0.8px solid #111;
     }
 
     .pdf-main-table th,
     .pdf-main-table td {
-      border: 1.2px solid #000;
-      padding: 2mm 1.5mm;
+      border: 0.8px solid #111;
+      padding: 1.2mm 1.2mm;
       vertical-align: middle;
       word-break: break-all;
       overflow-wrap: anywhere;
-      line-height: 1.28;
+      line-height: 1.2;
     }
 
     .pdf-top-label {
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 800;
       text-align: left;
-      height: 13mm;
+      height: 11mm;
       white-space: nowrap;
     }
 
     .pdf-top-value {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       text-align: left;
-      height: 13mm;
+      height: 11mm;
     }
 
     .pdf-head th {
-      height: 12mm;
-      font-size: 16px;
+      height: 9mm;
+      font-size: 13px;
       font-weight: 800;
       text-align: center;
       background: #fff;
       white-space: nowrap;
+      overflow: visible;
     }
 
     .pdf-row td {
-      height: 18mm;
-      font-size: 13.5px;
+      height: 15mm;
+      font-size: 12.5px;
       font-weight: 700;
     }
 
     .pdf-no {
       text-align: center;
-      font-size: 18px !important;
+      font-size: 16px !important;
       font-weight: 800 !important;
     }
 
@@ -187,25 +193,27 @@
 
     .pdf-check {
       text-align: center;
-      font-size: 18px !important;
+      font-size: 16px !important;
       font-weight: 800 !important;
-      border-left: 2.2px solid #000 !important;
-      border-right: 2.2px solid #000 !important;
+      line-height: 1 !important;
+      white-space: nowrap;
+      overflow: visible;
     }
 
     .pdf-remarks,
     .pdf-person {
       text-align: left;
-      font-size: 12.5px !important;
+      font-size: 11.5px !important;
       font-weight: 700 !important;
+      line-height: 1.18 !important;
     }
 
     .pdf-photo-box {
       width: 100%;
-      height: 74mm;
-      border-left: 1.2px solid #000;
-      border-right: 1.2px solid #000;
-      border-bottom: 1.2px solid #000;
+      height: 116mm;
+      border-left: 0.8px solid #111;
+      border-right: 0.8px solid #111;
+      border-bottom: 0.8px solid #111;
       position: relative;
       box-sizing: border-box;
       overflow: hidden;
@@ -238,13 +246,13 @@
     }
 
     .pdf-note {
-      border-left: 1.2px solid #000;
-      border-right: 1.2px solid #000;
-      border-bottom: 1.2px solid #000;
-      min-height: 12mm;
-      padding: 2mm;
-      font-size: 14px;
-      line-height: 1.35;
+      border-left: 0.8px solid #111;
+      border-right: 0.8px solid #111;
+      border-bottom: 0.8px solid #111;
+      min-height: 9mm;
+      padding: 1.4mm 1.8mm;
+      font-size: 12.5px;
+      line-height: 1.25;
       color: #d40000;
       font-weight: 800;
       box-sizing: border-box;
@@ -252,8 +260,8 @@
 
     .pdf-date-line {
       text-align: right;
-      font-size: 10px;
-      margin-top: 2mm;
+      font-size: 9px;
+      margin-top: 1.2mm;
       color: #333;
     }
   </style>
@@ -281,35 +289,45 @@
         <label for="ui-personName" class="field-label">担当者</label>
         <input id="ui-personName" type="text" class="input-box" placeholder="例：検査担当者名">
       </div>
-
-      <div class="sm:col-span-2">
-        <label for="ui-remarks" class="field-label">備考（任意）</label>
-        <textarea id="ui-remarks" class="input-box min-h-[76px]" placeholder="例：入荷数量・置場・気になる点など"></textarea>
-      </div>
     </section>
 
     <section class="mb-6">
-      <label class="field-label">検査項目（確認済みにチェック）</label>
+      <label class="field-label">検査項目（確認済みにチェック・備考は項目別）</label>
       <div class="bg-gray-50 border rounded-xl p-3 grid grid-cols-1 gap-3">
         <label class="check-card">
           <input type="checkbox" id="ui-chk-qty" class="accent-blue-600">
-          <span><strong>① 数量</strong><br><span class="text-sm text-gray-600">注文した数量が入荷したか</span></span>
+          <span>
+            <strong>① 数量</strong><br><span class="text-sm text-gray-600">注文した数量が入荷したか</span>
+            <textarea id="ui-remarks-qty" class="remark-input" placeholder="数量の備考　例：初期入荷分"></textarea>
+          </span>
         </label>
         <label class="check-card">
           <input type="checkbox" id="ui-chk-size" class="accent-blue-600">
-          <span><strong>② サイズ</strong><br><span class="text-sm text-gray-600">規格サイズが合っているか</span></span>
+          <span>
+            <strong>② サイズ</strong><br><span class="text-sm text-gray-600">規格サイズが合っているか</span>
+            <textarea id="ui-remarks-size" class="remark-input" placeholder="サイズの備考"></textarea>
+          </span>
         </label>
         <label class="check-card">
           <input type="checkbox" id="ui-chk-material" class="accent-blue-600">
-          <span><strong>③ 材質</strong><br><span class="text-sm text-gray-600">材質に間違いは無いか（ステンシル確認）</span></span>
+          <span>
+            <strong>③ 材質</strong><br><span class="text-sm text-gray-600">材質に間違いは無いか（ステンシル確認）</span>
+            <textarea id="ui-remarks-material" class="remark-input" placeholder="材質の備考"></textarea>
+          </span>
         </label>
         <label class="check-card">
           <input type="checkbox" id="ui-chk-appearance" class="accent-blue-600">
-          <span><strong>④ 外観</strong><br><span class="text-sm text-gray-600">曲がり、傷、ひどい錆はないか</span></span>
+          <span>
+            <strong>④ 外観</strong><br><span class="text-sm text-gray-600">曲がり、傷、ひどい錆はないか</span>
+            <textarea id="ui-remarks-appearance" class="remark-input" placeholder="外観の備考"></textarea>
+          </span>
         </label>
         <label class="check-card">
           <input type="checkbox" id="ui-chk-place" class="accent-blue-600">
-          <span><strong>⑤ 場所</strong><br><span class="text-sm text-gray-600">置場を決めて仕分けしているか</span></span>
+          <span>
+            <strong>⑤ 場所</strong><br><span class="text-sm text-gray-600">置場を決めて仕分けしているか</span>
+            <textarea id="ui-remarks-place" class="remark-input" placeholder="場所の備考"></textarea>
+          </span>
         </label>
       </div>
     </section>
@@ -342,16 +360,15 @@
         PDFだけ確認
       </button>
       <button onclick="processAndSubmit()" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 px-4 rounded-lg w-full shadow-lg transition">
-        PDFを出力して自動保存・送信する
+        PDFを出力してGoogleドライブへ保存
       </button>
     </div>
 
     <p class="text-xs text-gray-500 mt-3 leading-relaxed">
-      ※「PDFだけ確認」でPDFの中身を先に確認できます。Driveへ送る場合は右の送信ボタンを押してください。
+      ※先に「PDFだけ確認」でPDFが1ページで作れるか確認してください。保存できない場合は、下のGASコードも差し替えが必要です。
     </p>
   </main>
 
-  <!-- PDF出力専用エリア。通常画面には表示しません。 -->
   <div id="pdf-print-area" aria-hidden="true">
     <div class="pdf-sheet">
       <div class="pdf-title">材料受け入れ検査(形鋼)</div>
@@ -360,10 +377,10 @@
         <colgroup>
           <col style="width: 8%;">
           <col style="width: 14%;">
-          <col style="width: 37%;">
-          <col style="width: 9%;">
+          <col style="width: 35%;">
+          <col style="width: 12%;">
           <col style="width: 17%;">
-          <col style="width: 15%;">
+          <col style="width: 14%;">
         </colgroup>
         <tbody>
           <tr>
@@ -435,7 +452,7 @@
   </div>
 
   <script>
-    // 【重要】GASウェブアプリURLは既存設定をそのまま使用してください。
+    // 既存のGASウェブアプリURL。デプロイ設定はそのままでOKです。
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzk0YeblrObGWYyLDp7BFHh_q-MIB-vKqtbddntMXIzc0ecGyomBuCvFmEVwn6bAZ_a_w/exec";
 
     let currentImageSrc = null;
@@ -547,11 +564,17 @@
     });
 
     function getFormValues() {
+      const remarks = {};
+      inspectionItems.forEach(item => {
+        const el = document.getElementById(`ui-remarks-${item.id}`);
+        remarks[item.id] = el ? el.value.trim() : "";
+      });
+
       return {
         propertyName: document.getElementById("ui-propertyName").value.trim() || "未入力",
         responsibleName: document.getElementById("ui-responsibleName").value.trim() || "",
         personName: document.getElementById("ui-personName").value.trim() || "",
-        remarks: document.getElementById("ui-remarks").value.trim() || ""
+        remarks: remarks
       };
     }
 
@@ -584,22 +607,26 @@
 
         const values = getFormValues();
         const pdf = await buildPdf(values);
-        const pdfBase64 = pdf.output("datauristring");
+        const dataUri = pdf.output("datauristring");
+        const rawBase64 = dataUri.split(",")[1];
+        const fileName = `${safeFileName(values.propertyName)}_形鋼受け入れ検査.pdf`;
 
-        btn.textContent = "GASへ送信中...";
+        btn.textContent = "Googleドライブへ保存中...";
 
         const payload = {
           propertyName: values.propertyName,
-          pdfBase64: pdfBase64,
-          fileName: `${safeFileName(values.propertyName)}_形鋼受け入れ検査.pdf`
+          fileName: fileName,
+          mimeType: "application/pdf",
+          pdfBase64: dataUri,
+          pdfData: rawBase64
         };
 
         const result = await sendToGAS(payload);
 
         if (result.status === "success" || result.status === "ok") {
-          alert("帳票のPDF化、ドライブ保存、メール送信が完了しました！");
+          alert("Googleドライブへの保存が完了しました。" + (result.fileUrl ? "\n" + result.fileUrl : ""));
         } else if (result.status === "unknown") {
-          alert("GASへ送信しました。ただしブラウザ側で完了応答を読めませんでした。Googleドライブ側に保存されているか確認してください。");
+          alert("GASへ送信しました。ただしブラウザ側で完了応答を読めませんでした。Googleドライブ側に保存されているか確認してください。保存されていない場合は、GASコードをv5用に差し替えてください。");
         } else {
           alert("GAS側エラー: " + (result.message || "詳細不明"));
         }
@@ -607,8 +634,9 @@
         console.error(error);
         alert(
           "送信に失敗しました。\n\n" +
-          "まず左の「PDFだけ確認」でPDFが作れるか確認してください。\n" +
-          "PDFが作れる場合は、GAS側の公開設定・実行権限・URLを確認してください。"
+          "1. 左の『PDFだけ確認』でPDFが作れるか確認\n" +
+          "2. PDFが作れる場合は、GAS側のCode.gsをv5用に差し替え\n" +
+          "3. デプロイは既存URLを使う場合『新しいバージョン』で更新してください"
         );
       } finally {
         resetBtn(btn);
@@ -651,8 +679,6 @@
       } catch (networkError) {
         console.warn("通常送信に失敗。no-cors方式で再送します。", networkError);
 
-        // Apps ScriptのCORS/リダイレクトで通常fetchが落ちる場合の実務用フォールバック。
-        // 応答は読めませんが、GAS側へPOST自体は送ります。
         await fetch(GAS_URL, {
           method: "POST",
           mode: "no-cors",
@@ -685,7 +711,6 @@
       captureElement.style.left = "0";
       captureElement.style.top = "0";
       captureElement.style.width = "190mm";
-      captureElement.style.minHeight = "277mm";
       captureElement.style.background = "#ffffff";
       captureElement.style.visibility = "visible";
       captureElement.style.opacity = "1";
@@ -701,7 +726,7 @@
         await waitForImages(captureElement);
 
         const canvas = await html2canvas(captureElement, {
-          scale: 1.5,
+          scale: 1.6,
           useCORS: true,
           allowTaint: true,
           backgroundColor: "#ffffff",
@@ -712,30 +737,29 @@
           windowHeight: captureElement.scrollHeight
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.88);
+        const imgData = canvas.toDataURL("image/jpeg", 0.9);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF("p", "mm", "a4");
 
         const pageWidth = 210;
         const pageHeight = 297;
-        const margin = 8;
+        const margin = 6;
         const usableWidth = pageWidth - margin * 2;
         const usableHeight = pageHeight - margin * 2;
-        const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
-        let heightLeft = imgHeight;
-        let position = margin;
+        let imgWidth = usableWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
-        heightLeft -= usableHeight;
-
-        while (heightLeft > 0) {
-          pdf.addPage();
-          position = margin - (imgHeight - heightLeft);
-          pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
-          heightLeft -= usableHeight;
+        if (imgHeight > usableHeight) {
+          imgHeight = usableHeight;
+          imgWidth = (canvas.width * imgHeight) / canvas.height;
         }
 
+        const x = (pageWidth - imgWidth) / 2;
+        const y = margin;
+
+        // 1ページ固定。空白の2ページ目を作らない。
+        pdf.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
         return pdf;
       } finally {
         if (captureElement && captureElement.parentNode) {
@@ -755,7 +779,7 @@
       inspectionItems.forEach(item => {
         const isChecked = document.getElementById(`ui-chk-${item.id}`).checked;
         setText(`pdf-chk-${item.id}`, isChecked ? "〇" : "未");
-        setText(`pdf-remarks-${item.id}`, remarks);
+        setText(`pdf-remarks-${item.id}`, remarks[item.id] || "");
         setText(`pdf-person-${item.id}`, personName);
       });
 
@@ -785,7 +809,7 @@
     }
 
     function resetBtn(btn) {
-      btn.textContent = "PDFを出力して自動保存・送信する";
+      btn.textContent = "PDFを出力してGoogleドライブへ保存";
       btn.disabled = false;
       btn.classList.remove("opacity-50");
     }
