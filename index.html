@@ -4,8 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>形鋼受け入れ検査シート</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- v4：白紙PDF・通信エラー対策のため、使用するライブラリを明示して読み込み -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     /* =====================================================
        入力画面用
@@ -60,13 +64,26 @@
       display: none;
     }
 
+    .sub-button {
+      background: #ffffff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      font-weight: 700;
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      width: 100%;
+      transition: 0.15s;
+    }
+
+    .sub-button:hover {
+      background: #f9fafb;
+    }
+
     /* =====================================================
        PDF出力専用：Excel風フォーマット
-       ※入力画面とは別管理。GAS設定には影響しません。
+       入力画面とは別管理。GAS設定には影響しません。
     ===================================================== */
     #pdf-print-area {
-      /* 通常時は見えない場所へ退避。
-         PDF作成時だけ画面上に一瞬表示してhtml2canvasへ確実に読ませます。 */
       position: fixed;
       left: -120vw;
       top: 0;
@@ -81,15 +98,6 @@
       opacity: 0;
       pointer-events: none;
       z-index: -1;
-    }
-
-    #pdf-print-area.pdf-active {
-      position: fixed;
-      left: 0;
-      top: 0;
-      visibility: visible;
-      opacity: 1;
-      z-index: 9999;
     }
 
     .pdf-sheet {
@@ -250,6 +258,7 @@
     }
   </style>
 </head>
+
 <body class="bg-gray-100 p-4 font-sans">
 
   <main class="max-w-2xl mx-auto bg-white shadow-lg rounded-xl px-5 sm:px-6 pt-6 pb-8 mb-4">
@@ -322,14 +331,24 @@
       <div id="ui-preview-container" class="border-2 border-dashed border-gray-300 bg-gray-50 h-56 flex items-center justify-center rounded-lg overflow-hidden">
         <span class="text-gray-400">画像が選択されていません</span>
       </div>
+
       <button type="button" onclick="clearPhoto()" class="mt-3 w-full bg-white hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded-lg border border-gray-300 transition">
         写真をクリア
       </button>
     </section>
 
-    <button onclick="processAndSubmit()" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 px-4 rounded-lg w-full shadow-lg transition">
-      PDFを出力して自動保存・送信する
-    </button>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <button onclick="downloadPdfOnly()" id="test-btn" class="sub-button">
+        PDFだけ確認
+      </button>
+      <button onclick="processAndSubmit()" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 px-4 rounded-lg w-full shadow-lg transition">
+        PDFを出力して自動保存・送信する
+      </button>
+    </div>
+
+    <p class="text-xs text-gray-500 mt-3 leading-relaxed">
+      ※「PDFだけ確認」でPDFの中身を先に確認できます。Driveへ送る場合は右の送信ボタンを押してください。
+    </p>
   </main>
 
   <!-- PDF出力専用エリア。通常画面には表示しません。 -->
@@ -439,7 +458,11 @@
       return name ? name.replace(/[\\/:*?"<>|]/g, "_") : "写真";
     }
 
-    function handleImageUpload(e, sourceLabel) {
+    function safeFileName(name) {
+      return (name || "未入力").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
+    }
+
+    async function handleImageUpload(e, sourceLabel) {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
 
@@ -449,20 +472,59 @@
         return;
       }
 
-      currentImageName = normalizeFileName(file.name);
-      document.getElementById("ui-photo-status").textContent = `${sourceLabel}：${currentImageName}`;
+      try {
+        currentImageName = normalizeFileName(file.name);
+        document.getElementById("ui-photo-status").textContent = `${sourceLabel}：写真を軽量化中...`;
 
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        currentImageSrc = event.target.result;
+        currentImageSrc = await resizeImageFile(file, 1600, 1200, 0.72);
+
+        document.getElementById("ui-photo-status").textContent = `${sourceLabel}：${currentImageName}`;
         document.getElementById("ui-preview-container").innerHTML = `
           <img src="${currentImageSrc}" alt="選択写真" class="max-w-full max-h-full object-contain">
         `;
-      };
-      reader.onerror = function() {
+      } catch (err) {
+        console.error(err);
         alert("写真の読み込みに失敗しました。別の写真で試してください。");
-      };
-      reader.readAsDataURL(file);
+        clearPhoto();
+      }
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = event => resolve(event.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function resizeImageFile(file, maxWidth, maxHeight, quality) {
+      const dataUrl = await fileToDataURL(file);
+      const img = await loadImage(dataUrl);
+
+      const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+      const width = Math.round(img.width * ratio);
+      const height = Math.round(img.height * ratio);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      return canvas.toDataURL("image/jpeg", quality);
     }
 
     function clearPhoto() {
@@ -484,52 +546,162 @@
       handleImageUpload(e, "ファイル選択");
     });
 
+    function getFormValues() {
+      return {
+        propertyName: document.getElementById("ui-propertyName").value.trim() || "未入力",
+        responsibleName: document.getElementById("ui-responsibleName").value.trim() || "",
+        personName: document.getElementById("ui-personName").value.trim() || "",
+        remarks: document.getElementById("ui-remarks").value.trim() || ""
+      };
+    }
+
+    async function downloadPdfOnly() {
+      const btn = document.getElementById("test-btn");
+
+      try {
+        btn.textContent = "PDF作成中...";
+        btn.disabled = true;
+
+        const values = getFormValues();
+        const pdf = await buildPdf(values);
+        pdf.save(`${safeFileName(values.propertyName)}_形鋼受け入れ検査.pdf`);
+      } catch (error) {
+        console.error(error);
+        alert("PDF確認用データの作成に失敗しました。Consoleのエラーを確認してください。");
+      } finally {
+        btn.textContent = "PDFだけ確認";
+        btn.disabled = false;
+      }
+    }
+
     async function processAndSubmit() {
       const btn = document.getElementById("submit-btn");
-      const sourceElement = document.getElementById("pdf-print-area");
-
-      const propertyName = document.getElementById("ui-propertyName").value.trim() || "未入力";
-      const responsibleName = document.getElementById("ui-responsibleName").value.trim() || "";
-      const personName = document.getElementById("ui-personName").value.trim() || "";
-      const remarks = document.getElementById("ui-remarks").value.trim() || "";
-
-      let captureElement = null;
 
       try {
         btn.textContent = "PDF作成中...";
         btn.disabled = true;
         btn.classList.add("opacity-50");
 
-        preparePdfLayout({ propertyName, responsibleName, personName, remarks });
+        const values = getFormValues();
+        const pdf = await buildPdf(values);
+        const pdfBase64 = pdf.output("datauristring");
 
-        /*
-          v3修正ポイント：
-          html2pdf().from(非表示エリア) だと、Chrome拡張やDriveプレビュー環境で
-          白紙PDFになることがあるため、PDF帳票を一時的に「見えるクローン」として
-          body直下に作り、html2canvasで画像化してからjsPDFへ貼り込みます。
-          GASへ送る propertyName / pdfBase64 は従来どおりです。
-        */
-        captureElement = sourceElement.cloneNode(true);
-        captureElement.id = "pdf-capture-area";
-        captureElement.setAttribute("aria-hidden", "true");
-        captureElement.style.position = "absolute";
-        captureElement.style.left = "0";
-        captureElement.style.top = "0";
-        captureElement.style.width = "190mm";
-        captureElement.style.minHeight = "277mm";
-        captureElement.style.background = "#ffffff";
-        captureElement.style.visibility = "visible";
-        captureElement.style.opacity = "1";
-        captureElement.style.zIndex = "99999";
-        captureElement.style.pointerEvents = "none";
-        captureElement.style.color = "#000000";
-        document.body.appendChild(captureElement);
+        btn.textContent = "GASへ送信中...";
 
+        const payload = {
+          propertyName: values.propertyName,
+          pdfBase64: pdfBase64,
+          fileName: `${safeFileName(values.propertyName)}_形鋼受け入れ検査.pdf`
+        };
+
+        const result = await sendToGAS(payload);
+
+        if (result.status === "success" || result.status === "ok") {
+          alert("帳票のPDF化、ドライブ保存、メール送信が完了しました！");
+        } else if (result.status === "unknown") {
+          alert("GASへ送信しました。ただしブラウザ側で完了応答を読めませんでした。Googleドライブ側に保存されているか確認してください。");
+        } else {
+          alert("GAS側エラー: " + (result.message || "詳細不明"));
+        }
+      } catch (error) {
+        console.error(error);
+        alert(
+          "送信に失敗しました。\n\n" +
+          "まず左の「PDFだけ確認」でPDFが作れるか確認してください。\n" +
+          "PDFが作れる場合は、GAS側の公開設定・実行権限・URLを確認してください。"
+        );
+      } finally {
+        resetBtn(btn);
+      }
+    }
+
+    async function sendToGAS(payload) {
+      const bodyText = JSON.stringify(payload);
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: bodyText,
+          redirect: "follow"
+        });
+
+        const responseText = await response.text();
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${responseText.slice(0, 200)}`);
+        }
+
+        if (!responseText || responseText.trim() === "") {
+          return { status: "success" };
+        }
+
+        try {
+          return JSON.parse(responseText);
+        } catch (jsonError) {
+          const lower = responseText.toLowerCase();
+          if (lower.includes("success") || lower.includes("ok") || lower.includes("完了")) {
+            return { status: "success" };
+          }
+          console.warn("GAS returned non-JSON response:", responseText);
+          return { status: "unknown", message: responseText.slice(0, 200) };
+        }
+      } catch (networkError) {
+        console.warn("通常送信に失敗。no-cors方式で再送します。", networkError);
+
+        // Apps ScriptのCORS/リダイレクトで通常fetchが落ちる場合の実務用フォールバック。
+        // 応答は読めませんが、GAS側へPOST自体は送ります。
+        await fetch(GAS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: bodyText
+        });
+
+        return { status: "unknown" };
+      }
+    }
+
+    async function buildPdf(values) {
+      if (!window.html2canvas) {
+        throw new Error("html2canvasが読み込まれていません。ネットワークまたはCDNを確認してください。");
+      }
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error("jsPDFが読み込まれていません。ネットワークまたはCDNを確認してください。");
+      }
+
+      preparePdfLayout(values);
+
+      const sourceElement = document.getElementById("pdf-print-area");
+      const captureElement = sourceElement.cloneNode(true);
+
+      captureElement.id = "pdf-capture-area";
+      captureElement.setAttribute("aria-hidden", "true");
+      captureElement.style.position = "absolute";
+      captureElement.style.left = "0";
+      captureElement.style.top = "0";
+      captureElement.style.width = "190mm";
+      captureElement.style.minHeight = "277mm";
+      captureElement.style.background = "#ffffff";
+      captureElement.style.visibility = "visible";
+      captureElement.style.opacity = "1";
+      captureElement.style.zIndex = "99999";
+      captureElement.style.pointerEvents = "none";
+      captureElement.style.color = "#000000";
+
+      document.body.appendChild(captureElement);
+
+      try {
         window.scrollTo(0, 0);
-        await wait(500);
+        await wait(300);
+        await waitForImages(captureElement);
 
         const canvas = await html2canvas(captureElement, {
-          scale: 2,
+          scale: 1.5,
           useCORS: true,
           allowTaint: true,
           backgroundColor: "#ffffff",
@@ -540,73 +712,36 @@
           windowHeight: captureElement.scrollHeight
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const imgData = canvas.toDataURL("image/jpeg", 0.88);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF("p", "mm", "a4");
+
         const pageWidth = 210;
         const pageHeight = 297;
         const margin = 8;
         const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
         const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
         let heightLeft = imgHeight;
         let position = margin;
+
         pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
-        heightLeft -= (pageHeight - margin * 2);
+        heightLeft -= usableHeight;
 
         while (heightLeft > 0) {
           pdf.addPage();
           position = margin - (imgHeight - heightLeft);
           pdf.addImage(imgData, "JPEG", margin, position, usableWidth, imgHeight);
-          heightLeft -= (pageHeight - margin * 2);
+          heightLeft -= usableHeight;
         }
 
-        const pdfBase64 = pdf.output("datauristring");
-
-        if (captureElement && captureElement.parentNode) {
-          captureElement.parentNode.removeChild(captureElement);
-          captureElement = null;
-        }
-
-        btn.textContent = "GASへ送信中...";
-
-        const response = await fetch(GAS_URL, {
-          method: "POST",
-          body: JSON.stringify({ propertyName: propertyName, pdfBase64: pdfBase64 })
-        });
-
-        const data = await response.json();
-
-        if (data.status === "success") {
-          alert("帳票のPDF化、ドライブ保存、メール送信が完了しました！");
-        } else {
-          alert("GAS側エラー: " + (data.message || "詳細不明"));
-        }
-      } catch (error) {
-        console.error(error);
-        if (captureElement && captureElement.parentNode) {
-          captureElement.parentNode.removeChild(captureElement);
-        }
-        alert("エラーが発生しました。通信状況、GASのURL、写真サイズを確認してください。詳しくはブラウザの開発者ツールConsoleを確認してください。");
+        return pdf;
       } finally {
-        resetBtn(btn);
+        if (captureElement && captureElement.parentNode) {
+          captureElement.parentNode.removeChild(captureElement);
+        }
       }
-    }
-
-
-    function showPdfArea(element) {
-      element.classList.add("pdf-active");
-      element.style.position = "fixed";
-      element.style.left = "0";
-      element.style.top = "0";
-      element.style.visibility = "visible";
-      element.style.opacity = "1";
-      element.style.zIndex = "9999";
-    }
-
-    function hidePdfArea(element) {
-      element.classList.remove("pdf-active");
-      element.removeAttribute("style");
     }
 
     function preparePdfLayout({ propertyName, responsibleName, personName, remarks }) {
@@ -630,6 +765,19 @@
       } else {
         photoContainer.innerHTML = '<div class="pdf-photo-title">写真</div>';
       }
+    }
+
+    function waitForImages(root) {
+      const images = Array.from(root.querySelectorAll("img"));
+      if (images.length === 0) return Promise.resolve();
+
+      return Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
     }
 
     function wait(ms) {
