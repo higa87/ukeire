@@ -3,156 +3,230 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>材料受け入れ検査シート</title>
+  <title>形鋼受け入れ検査シート</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
-    /* A4縦に最適化した印刷用スタイル */
-    #pdf-content {
+    /* -------------------------------------
+       PDF出力用（Excel風フォーマット）のスタイル
+       ※普段は画面から見えないように設定
+    -------------------------------------- */
+    #pdf-print-area {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
       background-color: white;
-      padding: 30px;
-      width: 100%;
-      max-width: 750px;
-      margin: 0 auto;
+      padding: 20px;
+      width: 750px; /* A4縦に最適化 */
       box-sizing: border-box;
+      font-family: "MS UI Gothic", "Meiryo", sans-serif; /* 帳票らしいフォント */
     }
-    /* A4の1ページに確実におさまる高さ（280px）に調整 */
-    .photo-frame {
+    .excel-table {
       width: 100%;
-      height: 280px; 
-      border: 2px dashed #cbd5e1;
-      background-color: #f8fafc;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .excel-table th, .excel-table td {
+      border: 1px solid #000;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .excel-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    .pdf-photo-frame {
+      width: 100%;
+      height: 350px;
+      border: 1px solid #000;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
-    /* html2canvasのバグを回避する古典的かつ確実な画像指定 */
-    .photo-frame img {
+    .pdf-photo-frame img {
       max-width: 100%;
       max-height: 100%;
-      width: auto;
-      height: auto;
       display: block;
     }
   </style>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 p-4 font-sans">
 
-  <div class="max-w-2xl mx-auto bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-    <h1 class="block text-gray-700 text-xl font-bold mb-6 text-center" data-html2canvas-ignore="true">材料受け入れ検査 入力フォーム</h1>
+  <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg px-6 pt-6 pb-8 mb-4">
+    <h1 class="block text-gray-800 text-xl font-extrabold mb-6 text-center border-b-4 border-blue-500 pb-2">形鋼受け入れ検査</h1>
 
-    <div id="pdf-content">
-      <h2 class="text-2xl font-bold text-center mb-8 border-b-2 border-gray-800 pb-2">材料受け入れ検査シート</h2>
-      
-      <div class="mb-6">
-        <label class="block text-gray-700 text-sm font-bold mb-2" for="propertyName">
-          物件名
-        </label>
-        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="propertyName" type="text" placeholder="例：〇〇ビル改修工事">
-      </div>
+    <div class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2">物件名 / 現場名</label>
+      <input id="ui-propertyName" type="text" class="shadow appearance-none border rounded w-full py-3 px-3 text-gray-700 leading-tight focus:outline-none focus:border-blue-500" placeholder="例：〇〇ビル改修工事">
+    </div>
 
-      <div class="mb-6">
-        <label class="block text-gray-700 text-sm font-bold mb-2">検査項目 (確認済みにチェック)</label>
-        <div class="flex flex-col space-y-2 border rounded p-4 bg-gray-50">
-          <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600" id="chk-qty"><span class="ml-2">① 数量</span></label>
-          <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600" id="chk-size"><span class="ml-2">② サイズ</span></label>
-          <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600" id="chk-material"><span class="ml-2">③ 材質</span></label>
-          <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600" id="chk-appearance"><span class="ml-2">④ 外観</span></label>
-          <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600" id="chk-ident"><span class="ml-2">⑤ 識別</span></label>
-        </div>
-      </div>
-
-      <div class="mb-4" data-html2canvas-ignore="true">
-        <label class="block text-gray-700 text-sm font-bold mb-2" for="photo">
-          写真添付 (タップして撮影/選択)
-        </label>
-        <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" id="photo" type="file" accept="image/*">
-      </div>
-
-      <div class="mb-2">
-        <p class="block text-gray-700 text-sm font-bold mb-2">添付写真:</p>
-        <div id="preview-container" class="photo-frame">
-          <span class="text-gray-400">画像がありません</span>
-        </div>
+    <div class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2">検査項目 (確認済みにチェック)</label>
+      <div class="bg-gray-50 border rounded-lg p-4 grid grid-cols-2 gap-4">
+        <label class="inline-flex items-center p-2 bg-white border rounded shadow-sm"><input type="checkbox" class="form-checkbox h-6 w-6 text-blue-600" id="ui-chk-qty"><span class="ml-3 font-bold">① 数量</span></label>
+        <label class="inline-flex items-center p-2 bg-white border rounded shadow-sm"><input type="checkbox" class="form-checkbox h-6 w-6 text-blue-600" id="ui-chk-size"><span class="ml-3 font-bold">② サイズ</span></label>
+        <label class="inline-flex items-center p-2 bg-white border rounded shadow-sm"><input type="checkbox" class="form-checkbox h-6 w-6 text-blue-600" id="ui-chk-material"><span class="ml-3 font-bold">③ 材質</span></label>
+        <label class="inline-flex items-center p-2 bg-white border rounded shadow-sm"><input type="checkbox" class="form-checkbox h-6 w-6 text-blue-600" id="ui-chk-appearance"><span class="ml-3 font-bold">④ 外観</span></label>
+        <label class="inline-flex items-center p-2 bg-white border rounded shadow-sm col-span-2"><input type="checkbox" class="form-checkbox h-6 w-6 text-blue-600" id="ui-chk-ident"><span class="ml-3 font-bold">⑤ 識別 (ミルシート照合等)</span></label>
       </div>
     </div>
-    <div class="flex items-center justify-between mt-6" data-html2canvas-ignore="true">
-      <button onclick="generatePDFAndEmail()" id="submit-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded w-full focus:outline-none focus:shadow-outline">
-        PDFを出力して自動保存・送信する
-      </button>
+
+    <div class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2">写真添付</label>
+      <div class="flex space-x-3 mb-3">
+        <label class="w-1/2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded cursor-pointer text-center border border-blue-300 transition">
+          📷 カメラで撮影
+          <input type="file" accept="image/*" capture="environment" class="hidden" id="photo-cam">
+        </label>
+        <label class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded cursor-pointer text-center border border-gray-300 transition">
+          📁 フォルダから
+          <input type="file" accept="image/*" class="hidden" id="photo-file">
+        </label>
+      </div>
+      <div id="ui-preview-container" class="border-2 border-dashed border-gray-300 bg-gray-50 h-48 flex items-center justify-center rounded overflow-hidden">
+        <span class="text-gray-400">画像が選択されていません</span>
+      </div>
     </div>
+
+    <button onclick="processAndSubmit()" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 px-4 rounded w-full shadow-lg transition">
+      PDFを出力して自動保存・送信する
+    </button>
   </div>
+
+
+  <div id="pdf-print-area">
+    <h2 style="text-align: center; font-size: 22px; margin-bottom: 5px; text-decoration: underline;">形鋼・材料受け入れ検査記録表</h2>
+    <p style="text-align: right; font-size: 12px; margin-bottom: 10px;">検査日: <span id="pdf-date"></span></p>
+    
+    <table class="excel-table">
+      <tr>
+        <th style="width: 20%;">物件名 / 現場名</th>
+        <td style="width: 80%; text-align: left; padding-left: 10px;" id="pdf-propertyName" colspan="5"></td>
+      </tr>
+      <tr>
+        <th style="width: 16%;">① 数量</th>
+        <th style="width: 16%;">② サイズ</th>
+        <th style="width: 16%;">③ 材質</th>
+        <th style="width: 16%;">④ 外観</th>
+        <th style="width: 36%;">⑤ 識別 (証明書等)</th>
+      </tr>
+      <tr>
+        <td id="pdf-chk-qty" style="font-size: 20px; font-weight:bold;"></td>
+        <td id="pdf-chk-size" style="font-size: 20px; font-weight:bold;"></td>
+        <td id="pdf-chk-material" style="font-size: 20px; font-weight:bold;"></td>
+        <td id="pdf-chk-appearance" style="font-size: 20px; font-weight:bold;"></td>
+        <td id="pdf-chk-ident" style="font-size: 20px; font-weight:bold;"></td>
+      </tr>
+    </table>
+
+    <p style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">■ 添付写真 (荷姿・ラベル等)</p>
+    <div class="pdf-photo-frame" id="pdf-preview-container">
+      </div>
+  </div>
+
 
   <script>
     // 【重要】ご自身のGASウェブアプリURLをここに貼り付けてください
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw96HiWymOGqjNNjhyRw3ydbrgdg9grPZR5R1vj5iX5Pm7Ir9Unac3EUneJ6Lvz9qRFtA/exec";
+    const GAS_URL = "https://script.google.com/macros/s/ここに最新のURLを入れてください/exec";
 
-    // 写真プレビュー処理
-    document.getElementById('photo').addEventListener('change', function(e) {
+    let currentImageSrc = null;
+
+    // カメラとフォルダ、どちらのボタンが押されても同じ画像処理を行う関数
+    function handleImageUpload(e) {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          const container = document.getElementById('preview-container');
-          container.innerHTML = `<img src="${e.target.result}" alt="検査写真">`;
+        reader.onload = function(event) {
+          currentImageSrc = event.target.result;
+          // UI画面のプレビューに表示
+          document.getElementById('ui-preview-container').innerHTML = `<img src="${currentImageSrc}" class="max-h-full object-contain">`;
         };
         reader.readAsDataURL(file);
       }
-    });
+    }
 
-    // PDF生成・送信処理
-    function generatePDFAndEmail() {
-      const propertyName = document.getElementById('propertyName').value || "物件名未入力";
-      const element = document.getElementById('pdf-content');
+    // 2つのinputタグにイベントを紐付け
+    document.getElementById('photo-cam').addEventListener('change', handleImageUpload);
+    document.getElementById('photo-file').addEventListener('change', handleImageUpload);
+
+    // メイン処理（UIからExcel表へ転記 → PDF化 → 送信）
+    function processAndSubmit() {
+      const propertyName = document.getElementById('ui-propertyName').value || "未入力";
       const btn = document.getElementById('submit-btn');
       
-      btn.textContent = "送信処理中（しばらくお待ちください）...";
+      btn.textContent = "Excelフォーマット変換・送信処理中...";
       btn.disabled = true;
-      btn.classList.remove('bg-blue-500', 'hover:bg-blue-700');
-      btn.classList.add('bg-gray-400');
+      btn.classList.add('opacity-50');
 
-      // PDF出力設定（改ページによる分断を防ぐ設定を追加）
+      // 1. 今日の日付を取得してPDFの表にセット
+      const today = new Date();
+      document.getElementById('pdf-date').textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+
+      // 2. 物件名をPDFの表にセット
+      document.getElementById('pdf-propertyName').textContent = propertyName;
+
+      // 3. チェックボックスの状態を「〇」か「未」にしてPDFの表にセット
+      const checkIds = ['qty', 'size', 'material', 'appearance', 'ident'];
+      checkIds.forEach(id => {
+        const isChecked = document.getElementById(`ui-chk-${id}`).checked;
+        document.getElementById(`pdf-chk-${id}`).textContent = isChecked ? "〇" : "未";
+        document.getElementById(`pdf-chk-${id}`).style.color = isChecked ? "black" : "red";
+      });
+
+      // 4. 写真をPDF用の枠にコピー
+      if (currentImageSrc) {
+        document.getElementById('pdf-preview-container').innerHTML = `<img src="${currentImageSrc}">`;
+      } else {
+        document.getElementById('pdf-preview-container').innerHTML = `<span>写真なし</span>`;
+      }
+
+      // 5. 隠してあるExcel風テーブル領域をPDF化
+      const element = document.getElementById('pdf-print-area');
+      // 一瞬だけ画面外に実体化させる（html2pdfに読み込ませるため）
+      element.style.left = "0px";
+      element.style.position = "relative"; 
+
       const opt = {
-        margin:       [10, 15, 10, 15], 
-        filename:     `${propertyName}_材料受け入れ検査シート.pdf`,
+        margin:       [10, 10, 10, 10], 
+        filename:     `${propertyName}_形鋼受け入れ検査.pdf`,
         image:        { type: 'jpeg', quality: 0.95 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: 'avoid-all' } // 強制的なページ分割をブロック
+        pagebreak:    { mode: 'avoid-all' }
       };
 
       html2pdf().set(opt).from(element).outputPdf('datauristring').then(function(pdfBase64) {
-        const payload = {
-          propertyName: propertyName,
-          pdfBase64: pdfBase64
-        };
+        // PDF生成が終わったら再び隠す
+        element.style.left = "-9999px";
+        element.style.position = "absolute";
 
+        // GASへ送信
         fetch(GAS_URL, {
           method: 'POST',
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ propertyName: propertyName, pdfBase64: pdfBase64 })
         })
         .then(response => response.json())
         .then(data => {
           if(data.status === "success") {
-            alert("Googleドライブへの保存と、メール送信が完了しました！");
+            alert("帳票のPDF化、ドライブ保存、メール送信が完了しました！");
           } else {
-            alert("GAS側でエラーが発生しました: " + data.message);
+            alert("GAS側エラー: " + data.message);
           }
-          resetButton(btn);
+          resetBtn(btn);
         })
         .catch(error => {
-          alert("通信エラーが発生しました。");
-          resetButton(btn);
+          alert("通信エラー。電波状況かGASのURLを確認してください。");
+          resetBtn(btn);
         });
       });
     }
 
-    function resetButton(btn) {
+    function resetBtn(btn) {
       btn.textContent = "PDFを出力して自動保存・送信する";
       btn.disabled = false;
-      btn.classList.remove('bg-gray-400');
-      btn.classList.add('bg-blue-500', 'hover:bg-blue-700');
+      btn.classList.remove('opacity-50');
     }
   </script>
 </body>
