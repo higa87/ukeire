@@ -219,6 +219,14 @@
       overflow: visible;
     }
 
+    /* チェック列の見切れ対策：列幅を広げたうえで、見出しだけ少し詰める */
+    .pdf-head th:nth-child(4) {
+      font-size: 14px;
+      letter-spacing: -0.04em;
+      padding-left: 0.4mm;
+      padding-right: 0.4mm;
+    }
+
     .pdf-row td {
       height: 13.5mm;
       font-size: 13.5px;
@@ -295,8 +303,8 @@
     .pdf-date-line {
       position: absolute;
       right: 20mm;
-      bottom: 4.5mm;
-      font-size: 10px;
+      bottom: 9mm; /* 印刷時に下端で見切れないよう、安全余白内へ移動 */
+      font-size: 9.5px;
       font-weight: 500;
       color: #333;
       white-space: nowrap;
@@ -421,8 +429,8 @@
           <colgroup>
             <col style="width: 7.5%;">
             <col style="width: 13%;">
-            <col style="width: 38%;">
-            <col style="width: 8.5%;">
+            <col style="width: 35.5%;">
+            <col style="width: 11%;">
             <col style="width: 17%;">
             <col style="width: 16%;">
           </colgroup>
