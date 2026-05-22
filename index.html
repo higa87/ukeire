@@ -112,6 +112,7 @@
     .pdf-sheet {
       width: 210mm;
       height: 297mm;
+      position: relative;
       padding: 14mm 20mm 12mm 20mm; /* パンチ穴・ファイリング用に左右余白を確保 */
       box-sizing: border-box;
       background: #fff;
@@ -289,6 +290,16 @@
       position: relative;
       z-index: 1;
       background: #fff;
+    }
+
+    .pdf-date-line {
+      position: absolute;
+      right: 20mm;
+      bottom: 4.5mm;
+      font-size: 10px;
+      font-weight: 500;
+      color: #333;
+      white-space: nowrap;
     }
 
   </style>
@@ -482,6 +493,7 @@
           <div class="pdf-photo-title">写真</div>
         </div>
       </div>
+      <div class="pdf-date-line">検査日：<span id="pdf-date"></span></div>
     </div>
   </div>
 
