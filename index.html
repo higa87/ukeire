@@ -95,7 +95,8 @@
       position: fixed;
       left: -120vw;
       top: 0;
-      width: 190mm;
+      width: 200mm;
+      min-height: 285mm;
       background: #ffffff;
       color: #000000;
       box-sizing: border-box;
@@ -108,7 +109,8 @@
     }
 
     .pdf-sheet {
-      width: 190mm;
+      width: 200mm;
+      min-height: 285mm;
       padding: 4mm;
       box-sizing: border-box;
       background: #fff;
@@ -210,7 +212,7 @@
 
     .pdf-photo-box {
       width: 100%;
-      height: 126mm;
+      height: 165mm;
       border-left: 0.8px solid #111;
       border-right: 0.8px solid #111;
       border-bottom: 0.8px solid #111;
@@ -262,9 +264,14 @@
     </h1>
 
     <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <div class="sm:col-span-2">
+      <div>
         <label for="ui-propertyName" class="field-label">物件名 / 現場名</label>
         <input id="ui-propertyName" type="text" class="input-box" placeholder="例：〇〇工事">
+      </div>
+
+      <div>
+        <label for="ui-clientName" class="field-label">発注者</label>
+        <input id="ui-clientName" type="text" class="input-box" placeholder="例：〇〇建設 / 〇〇会社">
       </div>
 
       <div>
@@ -371,10 +378,14 @@
         </colgroup>
         <tbody>
           <tr>
-            <td class="pdf-top-label" colspan="2">物件名</td>
+            <td class="pdf-top-label">物件名</td>
             <td class="pdf-top-value" colspan="2" id="pdf-propertyName"></td>
+            <td class="pdf-top-label">発注者</td>
+            <td class="pdf-top-value" colspan="2" id="pdf-clientName"></td>
+          </tr>
+          <tr>
             <td class="pdf-top-label">責任者</td>
-            <td class="pdf-top-value" id="pdf-responsibleName"></td>
+            <td class="pdf-top-value" colspan="5" id="pdf-responsibleName"></td>
           </tr>
           <tr class="pdf-head">
             <th>No</th>
@@ -555,6 +566,7 @@
 
       return {
         propertyName: document.getElementById("ui-propertyName").value.trim() || "未入力",
+        clientName: document.getElementById("ui-clientName").value.trim() || "",
         responsibleName: document.getElementById("ui-responsibleName").value.trim() || "",
         personName: document.getElementById("ui-personName").value.trim() || "",
         remarks: remarks
@@ -693,7 +705,7 @@
       captureElement.style.position = "absolute";
       captureElement.style.left = "0";
       captureElement.style.top = "0";
-      captureElement.style.width = "190mm";
+      captureElement.style.width = "200mm";
       captureElement.style.background = "#ffffff";
       captureElement.style.visibility = "visible";
       captureElement.style.opacity = "1";
@@ -726,7 +738,7 @@
 
         const pageWidth = 210;
         const pageHeight = 297;
-        const margin = 6;
+        const margin = 3;
         const usableWidth = pageWidth - margin * 2;
         const usableHeight = pageHeight - margin * 2;
 
@@ -751,12 +763,13 @@
       }
     }
 
-    function preparePdfLayout({ propertyName, responsibleName, personName, remarks }) {
+    function preparePdfLayout({ propertyName, clientName, responsibleName, personName, remarks }) {
       const today = new Date();
       const dateText = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
 
       setText("pdf-date", dateText);
       setText("pdf-propertyName", propertyName);
+      setText("pdf-clientName", clientName);
       setText("pdf-responsibleName", responsibleName);
 
       inspectionItems.forEach(item => {
