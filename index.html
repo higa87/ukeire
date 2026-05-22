@@ -89,14 +89,15 @@
     }
 
     /* =====================================================
-       PDF出力専用：A4 1ページ固定・Excel風フォーマット
+       PDF出力専用：A4 1ページ固定・Excel配置厳守
+       パンチング用に左右余白を確保
     ===================================================== */
     #pdf-print-area {
       position: fixed;
       left: -120vw;
       top: 0;
-      width: 200mm;
-      min-height: 285mm;
+      width: 210mm;
+      height: 297mm;
       background: #ffffff;
       color: #000000;
       box-sizing: border-box;
@@ -109,32 +110,42 @@
     }
 
     .pdf-sheet {
-      width: 200mm;
-      min-height: 285mm;
-      padding: 4mm;
+      width: 210mm;
+      height: 297mm;
+      padding: 14mm 20mm 12mm 20mm; /* パンチ穴・ファイリング用に左右余白を確保 */
       box-sizing: border-box;
       background: #fff;
     }
 
-    .pdf-title {
+    .pdf-frame {
+      width: 170mm;
+      height: 271mm;
       border: 0.8px solid #111;
-      height: 12mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .pdf-title {
+      height: 13mm;
+      border-bottom: 0.8px solid #111;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
       font-weight: 800;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.04em;
       white-space: nowrap;
+      box-sizing: border-box;
     }
 
     .pdf-main-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      border-left: 0.8px solid #111;
-      border-right: 0.8px solid #111;
-      border-bottom: 0.8px solid #111;
+      box-sizing: border-box;
     }
 
     .pdf-main-table th,
@@ -144,27 +155,62 @@
       vertical-align: middle;
       word-break: break-all;
       overflow-wrap: anywhere;
-      line-height: 1.2;
+      line-height: 1.18;
+      box-sizing: border-box;
+    }
+
+    .pdf-main-table tr:first-child td {
+      border-top: 0;
+    }
+
+    .pdf-main-table tr td:first-child,
+    .pdf-main-table tr th:first-child {
+      border-left: 0;
+    }
+
+    .pdf-main-table tr td:last-child,
+    .pdf-main-table tr th:last-child {
+      border-right: 0;
+    }
+
+    .pdf-property-cell {
+      height: 26mm;
+      text-align: left;
+      font-weight: 800;
+      font-size: 20px;
+      padding-left: 10mm !important;
+      white-space: nowrap;
+    }
+
+    .pdf-property-label {
+      display: inline-block;
+      margin-right: 8mm;
+    }
+
+    .pdf-property-value {
+      font-size: 18px;
+      font-weight: 800;
     }
 
     .pdf-top-label {
-      font-size: 15px;
+      height: 13mm;
+      font-size: 20px;
       font-weight: 800;
-      text-align: left;
-      height: 11mm;
+      text-align: center;
       white-space: nowrap;
     }
 
     .pdf-top-value {
-      font-size: 14px;
+      height: 13mm;
+      font-size: 13.5px;
       font-weight: 700;
-      text-align: left;
-      height: 11mm;
+      text-align: center;
+      white-space: nowrap;
     }
 
     .pdf-head th {
-      height: 9mm;
-      font-size: 13px;
+      height: 12mm;
+      font-size: 16px;
       font-weight: 800;
       text-align: center;
       background: #fff;
@@ -173,14 +219,14 @@
     }
 
     .pdf-row td {
-      height: 15mm;
-      font-size: 12.5px;
-      font-weight: 700;
+      height: 13.5mm;
+      font-size: 13.5px;
+      font-weight: 800;
     }
 
     .pdf-no {
       text-align: center;
-      font-size: 16px !important;
+      font-size: 18px !important;
       font-weight: 800 !important;
     }
 
@@ -195,7 +241,7 @@
 
     .pdf-check {
       text-align: center;
-      font-size: 16px !important;
+      font-size: 17px !important;
       font-weight: 800 !important;
       line-height: 1 !important;
       white-space: nowrap;
@@ -205,17 +251,15 @@
     .pdf-remarks,
     .pdf-person {
       text-align: left;
-      font-size: 11.5px !important;
+      font-size: 12px !important;
       font-weight: 700 !important;
-      line-height: 1.18 !important;
+      line-height: 1.15 !important;
     }
 
     .pdf-photo-box {
       width: 100%;
-      height: 165mm;
-      border-left: 0.8px solid #111;
-      border-right: 0.8px solid #111;
-      border-bottom: 0.8px solid #111;
+      flex: 1;
+      border-top: 0;
       position: relative;
       box-sizing: border-box;
       overflow: hidden;
@@ -247,12 +291,6 @@
       background: #fff;
     }
 
-    .pdf-date-line {
-      text-align: right;
-      font-size: 9px;
-      margin-top: 1.2mm;
-      color: #333;
-    }
   </style>
 </head>
 
@@ -280,8 +318,8 @@
       </div>
 
       <div>
-        <label for="ui-personName" class="field-label">担当者</label>
-        <input id="ui-personName" type="text" class="input-box" placeholder="例：検査担当者名">
+        <label for="ui-personName" class="field-label">受取者</label>
+        <input id="ui-personName" type="text" class="input-box" placeholder="例：受取者名">
       </div>
     </section>
 
@@ -365,83 +403,85 @@
 
   <div id="pdf-print-area" aria-hidden="true">
     <div class="pdf-sheet">
-      <div class="pdf-title">材料受け入れ検査(形鋼)</div>
+      <div class="pdf-frame">
+        <div class="pdf-title">材料受け入れ検査(形鋼)</div>
 
-      <table class="pdf-main-table">
-        <colgroup>
-          <col style="width: 8%;">
-          <col style="width: 14%;">
-          <col style="width: 35%;">
-          <col style="width: 12%;">
-          <col style="width: 17%;">
-          <col style="width: 14%;">
-        </colgroup>
-        <tbody>
-          <tr>
-            <td class="pdf-top-label">物件名</td>
-            <td class="pdf-top-value" colspan="2" id="pdf-propertyName"></td>
-            <td class="pdf-top-label">発注者</td>
-            <td class="pdf-top-value" colspan="2" id="pdf-clientName"></td>
-          </tr>
-          <tr>
-            <td class="pdf-top-label">責任者</td>
-            <td class="pdf-top-value" colspan="5" id="pdf-responsibleName"></td>
-          </tr>
-          <tr class="pdf-head">
-            <th>No</th>
-            <th>確認項目</th>
-            <th>確認内容</th>
-            <th>チェック</th>
-            <th>備考</th>
-            <th>担当者</th>
-          </tr>
-          <tr class="pdf-row">
-            <td class="pdf-no">1</td>
-            <td class="pdf-item">数量</td>
-            <td class="pdf-content">注文した数量が入荷したか</td>
-            <td class="pdf-check" id="pdf-chk-qty"></td>
-            <td class="pdf-remarks" id="pdf-remarks-qty"></td>
-            <td class="pdf-person" id="pdf-person-qty"></td>
-          </tr>
-          <tr class="pdf-row">
-            <td class="pdf-no">2</td>
-            <td class="pdf-item">サイズ</td>
-            <td class="pdf-content">規格サイズが合っているか</td>
-            <td class="pdf-check" id="pdf-chk-size"></td>
-            <td class="pdf-remarks" id="pdf-remarks-size"></td>
-            <td class="pdf-person" id="pdf-person-size"></td>
-          </tr>
-          <tr class="pdf-row">
-            <td class="pdf-no">3</td>
-            <td class="pdf-item">材質</td>
-            <td class="pdf-content">材質に間違いは無いか<br>（ステンシル確認）</td>
-            <td class="pdf-check" id="pdf-chk-material"></td>
-            <td class="pdf-remarks" id="pdf-remarks-material"></td>
-            <td class="pdf-person" id="pdf-person-material"></td>
-          </tr>
-          <tr class="pdf-row">
-            <td class="pdf-no">4</td>
-            <td class="pdf-item">外観</td>
-            <td class="pdf-content">曲がり、傷、ひどい錆はないか</td>
-            <td class="pdf-check" id="pdf-chk-appearance"></td>
-            <td class="pdf-remarks" id="pdf-remarks-appearance"></td>
-            <td class="pdf-person" id="pdf-person-appearance"></td>
-          </tr>
-          <tr class="pdf-row">
-            <td class="pdf-no">5</td>
-            <td class="pdf-item">場所</td>
-            <td class="pdf-content">置場を決めて仕分けしているか</td>
-            <td class="pdf-check" id="pdf-chk-place"></td>
-            <td class="pdf-remarks" id="pdf-remarks-place"></td>
-            <td class="pdf-person" id="pdf-person-place"></td>
-          </tr>
-        </tbody>
-      </table>
+        <table class="pdf-main-table">
+          <colgroup>
+            <col style="width: 7.5%;">
+            <col style="width: 13%;">
+            <col style="width: 38%;">
+            <col style="width: 8.5%;">
+            <col style="width: 17%;">
+            <col style="width: 16%;">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="pdf-property-cell" colspan="4" rowspan="2">
+                <span class="pdf-property-label">物件名</span><span class="pdf-property-value" id="pdf-propertyName"></span>
+              </td>
+              <td class="pdf-top-label">発注者</td>
+              <td class="pdf-top-label">責任者</td>
+            </tr>
+            <tr>
+              <td class="pdf-top-value" id="pdf-clientName"></td>
+              <td class="pdf-top-value" id="pdf-responsibleName"></td>
+            </tr>
+            <tr class="pdf-head">
+              <th>No</th>
+              <th>確認項目</th>
+              <th>確認内容</th>
+              <th>チェック</th>
+              <th>備考</th>
+              <th>受取者</th>
+            </tr>
+            <tr class="pdf-row">
+              <td class="pdf-no">1</td>
+              <td class="pdf-item">数量</td>
+              <td class="pdf-content">注文した数量が入荷したか</td>
+              <td class="pdf-check" id="pdf-chk-qty"></td>
+              <td class="pdf-remarks" id="pdf-remarks-qty"></td>
+              <td class="pdf-person" id="pdf-person-qty"></td>
+            </tr>
+            <tr class="pdf-row">
+              <td class="pdf-no">2</td>
+              <td class="pdf-item">サイズ</td>
+              <td class="pdf-content">規格サイズが合っているか</td>
+              <td class="pdf-check" id="pdf-chk-size"></td>
+              <td class="pdf-remarks" id="pdf-remarks-size"></td>
+              <td class="pdf-person" id="pdf-person-size"></td>
+            </tr>
+            <tr class="pdf-row">
+              <td class="pdf-no">3</td>
+              <td class="pdf-item">材質</td>
+              <td class="pdf-content">材質に間違いは無いか<br>（ステンシル確認）</td>
+              <td class="pdf-check" id="pdf-chk-material"></td>
+              <td class="pdf-remarks" id="pdf-remarks-material"></td>
+              <td class="pdf-person" id="pdf-person-material"></td>
+            </tr>
+            <tr class="pdf-row">
+              <td class="pdf-no">4</td>
+              <td class="pdf-item">外観</td>
+              <td class="pdf-content">曲がり,傷,ひどい錆はないか</td>
+              <td class="pdf-check" id="pdf-chk-appearance"></td>
+              <td class="pdf-remarks" id="pdf-remarks-appearance"></td>
+              <td class="pdf-person" id="pdf-person-appearance"></td>
+            </tr>
+            <tr class="pdf-row">
+              <td class="pdf-no">5</td>
+              <td class="pdf-item">場所</td>
+              <td class="pdf-content">置場を決めて仕分けしているか</td>
+              <td class="pdf-check" id="pdf-chk-place"></td>
+              <td class="pdf-remarks" id="pdf-remarks-place"></td>
+              <td class="pdf-person" id="pdf-person-place"></td>
+            </tr>
+          </tbody>
+        </table>
 
-      <div class="pdf-photo-box" id="pdf-preview-container">
-        <div class="pdf-photo-title">写真</div>
+        <div class="pdf-photo-box" id="pdf-preview-container">
+          <div class="pdf-photo-title">写真</div>
+        </div>
       </div>
-      <div class="pdf-date-line">検査日：<span id="pdf-date"></span></div>
     </div>
   </div>
 
@@ -705,7 +745,8 @@
       captureElement.style.position = "absolute";
       captureElement.style.left = "0";
       captureElement.style.top = "0";
-      captureElement.style.width = "200mm";
+      captureElement.style.width = "210mm";
+      captureElement.style.height = "297mm";
       captureElement.style.background = "#ffffff";
       captureElement.style.visibility = "visible";
       captureElement.style.opacity = "1";
@@ -732,29 +773,12 @@
           windowHeight: captureElement.scrollHeight
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.9);
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF("p", "mm", "a4");
 
-        const pageWidth = 210;
-        const pageHeight = 297;
-        const margin = 3;
-        const usableWidth = pageWidth - margin * 2;
-        const usableHeight = pageHeight - margin * 2;
-
-        let imgWidth = usableWidth;
-        let imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        if (imgHeight > usableHeight) {
-          imgHeight = usableHeight;
-          imgWidth = (canvas.width * imgHeight) / canvas.height;
-        }
-
-        const x = (pageWidth - imgWidth) / 2;
-        const y = margin;
-
-        // 1ページ固定。空白の2ページ目を作らない。
-        pdf.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
+        // 1ページ固定。A4全体に配置し、パンチング用の左右余白はPDFレイアウト内で確保する。
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
         return pdf;
       } finally {
         if (captureElement && captureElement.parentNode) {
